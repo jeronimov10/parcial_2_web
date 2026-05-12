@@ -7,6 +7,7 @@ import { AssignRolesDto } from './dto/assign-roles.dto';
 
 @Injectable()
 export class UserService {
+    //Constructor de las tablas que vamos a usar de la BD
     constructor(
         @InjectRepository(User) private readonly userRepository: Repository<User>,
         @InjectRepository(Role) private readonly roleRepository: Repository<Role>,
