@@ -1,12 +1,8 @@
 -- =============================================================
 -- MIGRACIÓN 001: Esquema de usuarios y roles
 -- =============================================================
--- NOTA: Con synchronize: true en TypeORM estas tablas se crean
--- automáticamente al arrancar la app. Este script sirve para
--- crearlas manualmente o en entornos sin synchronize.
--- =============================================================
 
--- Extensión para gen_random_uuid()
+
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 -- Tabla users

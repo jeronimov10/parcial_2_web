@@ -1,10 +1,7 @@
 -- =============================================================
 -- SEED 002: Roles iniciales y datos de prueba
 -- =============================================================
--- IMPORTANTE: Los usuarios DEBEN crearse mediante POST /auth/register
--- para que la contraseña quede hasheada con bcrypt.
--- NO insertes usuarios directamente con contraseña en texto plano.
--- =============================================================
+
 
 -- 1. Insertar roles iniciales (sin duplicar si ya existen)
 INSERT INTO roles (role_name, description)
