@@ -55,6 +55,9 @@ export class AppoinmentService {
         const appointments = await this.appointmentRepository.find({
         relations: ['user'],
         });
+        if (!appointments || appointments.length === 0) {
+        throw new NotFoundException('No se encontraron citas');
+        }
         return appointments;
     }
 
