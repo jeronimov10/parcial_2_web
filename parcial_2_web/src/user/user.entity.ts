@@ -1,6 +1,7 @@
-import { Column, CreateDateColumn, Entity, JoinTable, ManyToMany, PrimaryGeneratedColumn, OneToOne } from 'typeorm';
+import { Column, CreateDateColumn, Entity, JoinTable, ManyToMany, PrimaryGeneratedColumn, OneToOne, OneToMany } from 'typeorm';
 import { Role } from '../roles/roles.entity';
 import { Profile } from '../profile/profile.entity';
+import { Appointment } from '../appoinment/appointment.entity';
 
 @Entity('users')
 export class User {
@@ -35,4 +36,7 @@ export class User {
 
     @OneToOne(() => Profile, (profile) => profile.user)
     profile!: Profile;
+
+    @OneToMany(() => Appointment, (appointment) => appointment.user)
+    appointment!: Appointment[];
 }

@@ -3,10 +3,12 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from './user/user.entity';
 import { Role } from './roles/roles.entity';
 import { Profile } from './profile/profile.entity';
+import { Appointment } from './appoinment/appointment.entity';
 import { UserModule } from './user/user.module';
 import { RolesModule } from './roles/roles.module';
 import { AuthModule } from './auth/auth.module';
 import { ProfileModule } from './profile/profile.module';
+import { AppoinmentModule } from './appoinment/appoinment.module';
 
 @Module({
   imports: [
@@ -17,14 +19,14 @@ import { ProfileModule } from './profile/profile.module';
       username: process.env.DB_USER || 'postgres',
       password: process.env.DB_PASS || 'Lacima12222431',
       database: process.env.DB_NAME || 'parcial2_web_nest',
-      entities: [User, Role, Profile],
+      entities: [User, Role, Profile, Appointment],
       synchronize: true,
     }),
     UserModule,
     RolesModule,
     AuthModule,
     ProfileModule,
+    AppoinmentModule,
   ],
-  
 })
 export class AppModule {}
