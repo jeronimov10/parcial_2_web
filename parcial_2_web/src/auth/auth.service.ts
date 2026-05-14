@@ -6,6 +6,7 @@ import { Repository } from 'typeorm';
 import { User } from '../user/user.entity';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
+import { ChangePasswordDto } from './dto/update-password.dto';
 
 @Injectable()
 export class AuthService {
@@ -73,4 +74,34 @@ export class AuthService {
         access_token: accessToken,
         };
     }
+
+    //Change password
+    async changePassword(userId: string, changePasswordDto: ChangePasswordDto) {
+        const user = await this.userRepository.findOne({
+            where: { id: userId },
+        });
+
+        if (!user) {
+            throw new UnauthorizedException('Usuario no encontrado');
+        }
+
+        const isPasswordValid = await bcrypt.compare(
+            changePasswordDto.currentPassword,
+            user.password,
+        );
+
+        if (!isPasswordValid) {
+            throw new UnauthorizedException('Contraseña actual incorrecta');
+        }
+
+        const hashedNewPassword = await bcrypt.hash(changePasswordDto.newPassword, 10);
+
+        user.password = hashedNewPassword;
+
+        await this.userRepository.save(user);
+
+        return {
+            message: 'Contraseña actualizada con exito',
+        };
+        }
 }

@@ -1,5 +1,6 @@
-import { Column, CreateDateColumn, Entity, JoinTable, ManyToMany, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, CreateDateColumn, Entity, JoinTable, ManyToMany, PrimaryGeneratedColumn, OneToOne } from 'typeorm';
 import { Role } from '../roles/roles.entity';
+import { Profile } from '../profile/profile.entity';
 
 @Entity('users')
 export class User {
@@ -31,4 +32,7 @@ export class User {
         inverseJoinColumn: { name: 'role_id', referencedColumnName: 'id' },
     })
     roles!: Role[];
+
+    @OneToOne(() => Profile, (profile) => profile.user)
+    profile!: Profile;
 }

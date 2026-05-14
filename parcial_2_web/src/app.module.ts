@@ -2,9 +2,11 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from './user/user.entity';
 import { Role } from './roles/roles.entity';
+import { Profile } from './profile/profile.entity';
 import { UserModule } from './user/user.module';
 import { RolesModule } from './roles/roles.module';
 import { AuthModule } from './auth/auth.module';
+import { ProfileModule } from './profile/profile.module';
 
 @Module({
   imports: [
@@ -15,12 +17,14 @@ import { AuthModule } from './auth/auth.module';
       username: process.env.DB_USER || 'postgres',
       password: process.env.DB_PASS || 'Lacima12222431',
       database: process.env.DB_NAME || 'parcial2_web_nest',
-      entities: [User, Role],
+      entities: [User, Role, Profile],
       synchronize: true,
     }),
     UserModule,
     RolesModule,
     AuthModule,
+    ProfileModule,
   ],
+  
 })
 export class AppModule {}

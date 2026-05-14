@@ -1,213 +1,223 @@
-# Guía de Pruebas en Postman
+# Guía de pruebas
 
-## Prerrequisitos
-1. PostgreSQL corriendo en `localhost:5433`
-2. Base de datos `parcial2_web_nest` creada
-3. Ejecutar: `npm run start:dev` dentro de `parcial_2_web/`
-4. Ejecutar el script SQL `sql/002_seed_roles_and_test_data.sql` para crear los roles `admin` y `doctor`
+## Antes de empezar
+
+1. PostgreSQL corriendo (este proyecto usa puerto 5433 por defecto)
+2. Base de datos creada: `CREATE DATABASE parcial2_web_nest;`
+3. App corriendo: `npm run start:dev` dentro de `parcial_2_web/`
+4. Ejecutar en tu cliente SQL (DBeaver, pgAdmin, psql): `sql/001_create_users_roles_schema.sql`
+5. Ejecutar: `sql/002_seed_roles_and_test_data.sql` (crea roles admin y doctor)
+
+El token expira en **120 segundos**. Si recibes 401, vuelve a hacer login.
 
 ---
 
-## Flujo completo de prueba
+## Paso 1 — Registrar usuario admin
 
-### PASO 1 — Registrar un usuario
-
-**POST** `http://localhost:3000/auth/register`
-
-Headers: `Content-Type: application/json`
-
-Body:
+```
+POST http://localhost:3000/auth/register
+Content-Type: application/json
+```
 ```json
 {
   "email": "admin@test.com",
   "password": "Admin123!",
-  "name": "Admin Usuario"
+  "name": "Admin"
 }
 ```
-
-Respuesta esperada `201`:
-```json
-{ "message": "Usuario registrado con éxito", "userId": "<uuid>" }
-```
+Guarda el `userId` de la respuesta.
 
 ---
 
-### PASO 2 — Asignar rol admin por SQL
+## Paso 2 — Asignar rol admin por SQL
 
-Como el primer usuario no tiene rol todavía, asigna `admin` directamente en la base de datos:
+Abre tu cliente SQL y ejecuta (cambia el email si usaste otro):
 
 ```sql
 INSERT INTO users_roles (user_id, role_id)
 SELECT u.id, r.id
-FROM users u
-CROSS JOIN roles r
+FROM users u, roles r
 WHERE u.email = 'admin@test.com'
   AND r.role_name = 'admin'
 ON CONFLICT DO NOTHING;
 ```
 
-> **Importante:** Si asignas roles después de haber hecho login, debes hacer login de nuevo. El token viejo NO se actualiza solo.
+Verifica:
+```sql
+SELECT u.email, r.role_name FROM users u
+JOIN users_roles ur ON ur.user_id = u.id
+JOIN roles r ON r.id = ur.role_id;
+```
 
 ---
 
-### PASO 3 — Hacer login
+## Paso 3 — Login
 
-**POST** `http://localhost:3000/auth/login`
-
-Body:
+```
+POST http://localhost:3000/auth/login
+Content-Type: application/json
+```
 ```json
 {
   "email": "admin@test.com",
   "password": "Admin123!"
 }
 ```
+Copia el `access_token` de la respuesta.
 
-Respuesta esperada `200`:
-```json
-{ "access_token": "<jwt>" }
+---
+
+## Paso 4 — Configurar el token en Postman
+
+En cada request protegido, pestaña **Headers**:
 ```
-
-Copia el `access_token`. Expira en **120 segundos**.
-
----
-
-### PASO 4 — Configurar Authorization en Postman
-
-En la pestaña **Authorization** de cada request protegido:
-- Type: `Bearer Token`
-- Token: pega el `access_token`
-
-O en la pestaña **Headers**:
-- Key: `Authorization`
-- Value: `Bearer <token>`
-
----
-
-### PASO 5 — Obtener perfil propio
-
-**GET** `http://localhost:3000/users/me`
-
-Headers: `Authorization: Bearer <token>`
-
-Respuesta esperada `200`:
-```json
-{
-  "id": "<uuid>",
-  "email": "admin@test.com",
-  "name": "Admin Usuario",
-  "phone": null,
-  "roles": ["admin"]
-}
+Authorization: Bearer <pega el token aquí>
 ```
 
 ---
 
-### PASO 6 — Listar usuarios (solo admin)
+## Paso 5 — GET /users/me
 
-**GET** `http://localhost:3000/users`
-
-Headers: `Authorization: Bearer <token>`
-
-Respuesta esperada `200`:
+```
+GET http://localhost:3000/users/me
+Authorization: Bearer <token>
+```
+Respuesta esperada:
 ```json
-[
-  {
-    "id": "<uuid>",
-    "email": "admin@test.com",
-    "name": "Admin Usuario",
-    "roles": ["admin"]
-  }
-]
+{ "id": "...", "email": "admin@test.com", "name": "Admin", "phone": null, "roles": ["admin"] }
 ```
 
 ---
 
-### PASO 7 — Crear un rol (solo admin)
+## Paso 6 — GET /users
 
-**POST** `http://localhost:3000/roles`
-
-Headers: `Authorization: Bearer <token>`, `Content-Type: application/json`
-
-Body:
-```json
-{
-  "role_name": "enfermero",
-  "description": "Enfermero del sistema"
-}
 ```
+GET http://localhost:3000/users
+Authorization: Bearer <token>
+```
+Respuesta esperada: array con todos los usuarios y sus roles.
 
-Respuesta esperada `201`:
+---
+
+## Paso 7 — GET /roles
+
+```
+GET http://localhost:3000/roles
+Authorization: Bearer <token>
+```
+Respuesta esperada: `[{ "id": "...", "role_name": "admin", "description": "..." }, ...]`
+
+---
+
+## Paso 8 — POST /roles (crear rol nuevo)
+
+```
+POST http://localhost:3000/roles
+Authorization: Bearer <token>
+Content-Type: application/json
+```
 ```json
-{ "message": "Rol creado con éxito", "roleId": "<uuid>" }
+{ "role_name": "enfermero", "description": "Enfermero del sistema" }
+```
+Respuesta esperada: `{ "message": "Rol creado con éxito", "roleId": "..." }`
+
+---
+
+## Paso 9 — Registrar segundo usuario
+
+```
+POST http://localhost:3000/auth/register
+Content-Type: application/json
+```
+```json
+{ "email": "doctor@test.com", "password": "Doctor123!", "name": "Doctor" }
+```
+Guarda el `userId` de la respuesta.
+
+---
+
+## Paso 10 — PATCH /users/:id/roles (asignar roles)
+
+Reemplaza `:id` con el `userId` del doctor:
+```
+PATCH http://localhost:3000/users/<userId>/roles
+Authorization: Bearer <token>
+Content-Type: application/json
+```
+```json
+{ "roles": ["doctor"] }
+```
+Respuesta esperada: `{ "message": "Roles asignados" }`
+
+> Si asignas roles a tu propio usuario admin, haz login de nuevo para que el token refleje los cambios.
+
+---
+
+## Paso 11 — POST /users/me/profile (crear perfil)
+
+```
+POST http://localhost:3000/users/me/profile
+Authorization: Bearer <token>
+Content-Type: application/json
+```
+```json
+{ "bio": "Médico general", "address": "Calle 123", "birth_date": "1990-05-15" }
+```
+Respuesta esperada: `{ "message": "Perfil creado con éxito", "profileId": "..." }`
+
+---
+
+## Paso 12 — GET /users/me/profile
+
+```
+GET http://localhost:3000/users/me/profile
+Authorization: Bearer <token>
 ```
 
 ---
 
-### PASO 8 — Listar roles (solo admin)
+## Paso 13 — PATCH /users/me/profile (actualizar campos sueltos)
 
-**GET** `http://localhost:3000/roles`
-
-Headers: `Authorization: Bearer <token>`
-
-Respuesta esperada `200`:
+```
+PATCH http://localhost:3000/users/me/profile
+Authorization: Bearer <token>
+Content-Type: application/json
+```
 ```json
-[
-  { "id": "<uuid>", "role_name": "admin", "description": "Administrador del sistema" },
-  { "id": "<uuid>", "role_name": "doctor", "description": "Médico del sistema" }
-]
+{ "bio": "Especialista en cardiología" }
 ```
 
 ---
 
-### PASO 9 — Registrar un segundo usuario
+## Paso 14 — PUT /users/me/profile (reemplazar perfil completo)
 
-**POST** `http://localhost:3000/auth/register`
-
-Body:
+```
+PUT http://localhost:3000/users/me/profile
+Authorization: Bearer <token>
+Content-Type: application/json
+```
 ```json
-{
-  "email": "doctor@test.com",
-  "password": "Doctor123!",
-  "name": "Doctor Prueba"
-}
+{ "bio": "Nuevo bio", "address": "Nueva dirección", "birthdate": "1985-03-20" }
 ```
 
 ---
 
-### PASO 10 — Asignar roles a un usuario (solo admin)
+## Paso 15 — DELETE /users/me/profile
 
-**PATCH** `http://localhost:3000/users/<userId>/roles`
-
-Headers: `Authorization: Bearer <token>`, `Content-Type: application/json`
-
-Body:
-```json
-{
-  "roles": ["doctor"]
-}
 ```
-
-Respuesta esperada `200`:
-```json
-{ "message": "Roles asignados" }
+DELETE http://localhost:3000/users/me/profile
+Authorization: Bearer <token>
 ```
-
-> Usa el `userId` obtenido en el registro o consulta en la BD.
 
 ---
 
-## Errores comunes
+## Tabla de errores
 
-| Error | Causa | Solución |
-|-------|-------|----------|
-| `401 Unauthorized` | Token faltante, inválido o expirado | Haz login nuevamente (el token dura 120s) |
-| `403 Forbidden` | Tu usuario no tiene rol `admin` | Asigna rol admin vía SQL y vuelve a hacer login |
-| `423 Locked` | Usuario con `is_active = false` | Cambiar manualmente en la BD |
-| `409 Conflict` | Email o role_name ya existe | Usar otro email o rol |
-| `400 Bad Request` | Campos inválidos o faltantes | Revisar el body del request |
-
----
-
-## Nota sobre expiración del token
-
-El token JWT expira en **120 segundos** (`JWT_EXPIRES_IN=120s`). Si recibes un `401` inesperado, simplemente vuelve a hacer `POST /auth/login` para obtener un nuevo token.
+| Código | Causa | Solución |
+|--------|-------|----------|
+| 400 | Body inválido o campo faltante | Revisar el JSON enviado |
+| 401 | Token faltante, expirado o mal escrito | Hacer login de nuevo |
+| 403 | Token válido pero sin rol admin | Asignar rol admin vía SQL y re-login |
+| 404 | Recurso no encontrado | Verificar el id o que el recurso exista |
+| 409 | Email o role_name duplicado | Usar valores únicos |
+| 423 | Usuario con is_active = false | Activar manualmente en la BD |

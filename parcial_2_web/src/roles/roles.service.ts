@@ -1,8 +1,9 @@
-import { ConflictException, Injectable, InternalServerErrorException } from '@nestjs/common';
+import { ConflictException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Role } from './roles.entity';
 import { CreateRoleDto } from './dto/create-role.dto';
+import { UpdateRoleDto } from './dto/update-role.dto';
 
 @Injectable()
 export class RolesService {
@@ -42,4 +43,42 @@ export class RolesService {
         throw new InternalServerErrorException('Error al obtener roles');
         }
     }
+
+    //Metdo para actualizar un rol
+    async updateRole(id: string, updateRoleDto: UpdateRoleDto) {
+        const role = await this.roleRepository.findOne({
+            where: { id },
+        });
+
+        if (!role) {
+            throw new NotFoundException('Rol no encontrado');
+        }
+
+        if (updateRoleDto.role_name !== undefined) {
+            const existingRole = await this.roleRepository.findOne({
+            where: { role_name: updateRoleDto.role_name },
+            });
+
+            if (existingRole && existingRole.id !== id) {
+            throw new ConflictException('role_name ya existe');
+            }
+
+            role.role_name = updateRoleDto.role_name;
+        }
+
+        if (updateRoleDto.description !== undefined) {
+            role.description = updateRoleDto.description;
+        }
+
+        const updatedRole = await this.roleRepository.save(role);
+
+        return {
+            message: 'Rol actualizado con éxito',
+            role: {
+            id: updatedRole.id,
+            role_name: updatedRole.role_name,
+            description: updatedRole.description,
+            },
+        };
+        }
 }
